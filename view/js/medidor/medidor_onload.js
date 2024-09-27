@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
             states.sort((a, b) => a.nome.localeCompare(b.nome)); // Ordena os estados pelo nome
             states.forEach(state => {
                 const option = document.createElement('option');
-                option.value = state.id; // O valor será o ID do estado no IBGE (ex: 35 para São Paulo)
+                option.value = state.nome; // Usar o nome do estado como valor
                 option.textContent = state.nome; // O texto será o nome do estado (ex: "São Paulo")
                 stateSelect.appendChild(option);
             });
@@ -19,11 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Evento de mudança no seletor de estados
     document.getElementById('inputGroupSelect02').addEventListener('change', function() {
-        const selectedStateId = this.value; // ID do estado selecionado
+        const selectedStateName = this.value; // Nome do estado selecionado
         const citySelect = document.getElementById('inputGroupSelectCity');
 
         // Se nenhum estado for selecionado, desabilita o seletor de cidades
-        if (selectedStateId === 'null') {
+        if (selectedStateName === 'null') {
             citySelect.innerHTML = '<option value="null">Escolha a sua Cidade</option>';
             citySelect.disabled = true;
             return;
@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', function() {
         citySelect.innerHTML = '<option value="null">Carregando...</option>';
         citySelect.disabled = true;
 
-        // Buscar cidades com base no estado selecionado
-        fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedStateId}/municipios`)
+        // Buscar cidades com base no nome do estado selecionado
+        fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${encodeURIComponent(selectedStateName)}/municipios`)
             .then(response => response.json())
             .then(cities => {
                 citySelect.innerHTML = '<option value="null">Escolha a sua Cidade</option>';
@@ -55,8 +55,28 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    //CHAT GPT AGORA VAMOS PARA A PARTE DO SELECT
+    // Evento de mudança no seletor de cidades
+    document.getElementById('inputGroupSelectCity').addEventListener('change', function() {
+        const selectedStateName = document.getElementById('inputGroupSelect02').value; // Nome do estado selecionado
+        const selectedCityName = this.value; // Nome da cidade selecionada
 
+        // Se nenhuma cidade for selecionada, não buscar sensores
+        if (selectedCityName === 'null') {
+            return;
+        }
 
-
+        // Buscar sensores com base no estado e cidade selecionados
+        fetch(`/sensor/filtro/${encodeURIComponent(selectedStateName)}/${encodeURIComponent(selectedCityName)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status) {
+                    console.log("Sensores encontrados:", data.data); // Imprime todos os dados dos sensores retornados
+                } else {
+                    console.error("Erro ao buscar sensores:", data.msg);
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar sensores:', error);
+            });
+    });
 });

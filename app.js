@@ -24,7 +24,7 @@ db.once('open', () => {
     // Rotas
     rotaSensor(app, db);
 
-    const PORT = process.env.PORT || 8080;
+    const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Servidor rodando na porta ${PORT}`);
         console.log(`http://localhost:${PORT}/home.html`)
@@ -32,6 +32,7 @@ db.once('open', () => {
         console.log(`http://localhost:${PORT}/login.html`)
     });
 
+    /*
     // Simulação de dados via MQTT
     const client = mqtt.connect('mqtt://broker.hivemq.com');
 
@@ -63,4 +64,5 @@ db.once('open', () => {
     client.on('error', function (error) {
         console.error('Erro ao conectar no broker MQTT:', error);
     });
+    */
 });
