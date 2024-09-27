@@ -1,36 +1,66 @@
 const express = require('express');
 const fileUpload = require('express-fileupload');
 const path = require('path');
-
-//importa o driver do mysql
-const mysql = require('mysql');
+const mongoose = require('mongoose');
+const mqtt = require('mqtt');
+const rotaSensor = require('./control/rota_sensor');
 
 const app = express();
 
-//O express permite que sejam enviados arquivos. js para o front-end
-app.use(express.static('js'));
+// Conexão com o MongoDB Atlas
+const mongoURI = 'mongodb+srv://raulcvf:raulcvf2007@cluster0.0vxks.mongodb.net/fluvioapp?retryWrites=true&w=majority&appName=Cluster0';
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
 
-//quando for enviado um texto json no corpo da requisição o expresse irá transformar isso em um objeto json
-//em request.body, ou seja request.body é um objeto json contendo o texto json recebido no corpo da requisição.
-app.use(express.json())
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'Erro de conexão ao MongoDB:'));
+db.once('open', () => {
+    console.log('Conectado ao MongoDB Atlas');
 
-app.use(fileUpload());
-app.use(express.static(path.join(__dirname, 'view')));
+    // Configurações do Express
+    app.use(express.json());
+    app.use(fileUpload());
+    app.use(express.static(path.join(__dirname, 'view')));
 
-var banco = mysql.createPool({
-    connectionLimit: 128,
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'colegiosunivap'
-});
+    // Rotas
+    rotaSensor(app, db);
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`http://localhost:${PORT}/`)
-    console.log(`http://localhost:${PORT}/home.html`)
-    console.log(`http://localhost:${PORT}/medidores.html`)
-    console.log(`http://localhost:${PORT}/login.html`)
-    console.log(`http://localhost:${PORT}/teste.html`)
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+        console.log(`Servidor rodando na porta ${PORT}`);
+        console.log(`http://localhost:${PORT}/home.html`)
+        console.log(`http://localhost:${PORT}/medidor.html`)
+        console.log(`http://localhost:${PORT}/login.html`)
+    });
+
+    // Simulação de dados via MQTT
+    const client = mqtt.connect('mqtt://broker.hivemq.com');
+
+    client.on('connect', function () {
+        console.log('Conectado ao broker MQTT');
+
+        // Função para enviar dados simulados dos sensores
+        function sendFakeData() {
+            const sensorData = {
+                id: Math.floor(Math.random() * 1000), // ID do sensor
+                type: 'fluviometrico', // Tipo de sensor
+                waterLevel: (Math.random() * 100).toFixed(2), // Nível da água
+                quality: (Math.random() * 100).toFixed(2), // Qualidade da água
+                temperature: (Math.random() * 35).toFixed(2), // Temperatura do ar
+                humidity: (Math.random() * 100).toFixed(2), // Umidade do ar
+                latitude: -23.5505,
+                longitude: -46.6333
+            };
+
+            // Publica os dados no tópico 'fluvioApp/sensorData'
+            client.publish('fluvioApp/sensorData', JSON.stringify(sensorData));
+            console.log('Dados enviados:', sensorData);
+        }
+
+        // Enviar dados a cada 60 segundos
+        setInterval(sendFakeData, 60000);
+    });
+
+    client.on('error', function (error) {
+        console.error('Erro ao conectar no broker MQTT:', error);
+    });
 });
