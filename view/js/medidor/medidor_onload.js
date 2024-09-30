@@ -18,6 +18,34 @@ document.addEventListener('DOMContentLoaded', function () {
         iframeChuva.src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=10&level=surface&overlay=rain&menu=&message=&marker=&calendar=24&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
     }
 
+    // Função para buscar latitude e longitude com base no nome do estado ou cidade
+    function buscarCoordenadas(localidade, callback) {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(localidade)}&format=json&limit=1`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const lat = data[0].lat;
+                    const lon = data[0].lon;
+                    callback(lat, lon);
+                } else {
+                    alert('Não foi possível encontrar as coordenadas para essa localidade.');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar coordenadas:', error);
+                alert('Erro ao buscar coordenadas. Tente novamente mais tarde.');
+            });
+    }
+
+    // Função para atualizar o gráfico e o local
+    function updateLocation(lat, lon, label) {
+        atualizarLocalizacao(label);
+        atualizarIframes(lat, lon);
+        fetchDataAndUpdateChart(lat, lon, label);
+    }
+
     // Carregar estados
     function carregarEstados() {
         fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados')
@@ -115,16 +143,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Função para atualizar o gráfico e o local
-    function updateLocation(lat, lon, label) {
-        atualizarLocalizacao(label);
-        atualizarIframes(lat, lon);
-        fetchDataAndUpdateChart(lat, lon, label);
-    }
-
     // Evento de mudança no seletor de estados
     document.getElementById('inputGroupSelect02').addEventListener('change', function () {
-        const selectedStateId = this.options[this.selectedIndex].getAttribute('data-id');
         const selectedStateName = this.value;
 
         const citySelect = document.getElementById('inputGroupSelectCity');
@@ -142,17 +162,13 @@ document.addEventListener('DOMContentLoaded', function () {
         atualizarLocalizacao(selectedStateName);
 
         // Carregar as cidades para o estado selecionado
+        const selectedStateId = this.options[this.selectedIndex].getAttribute('data-id');
         carregarCidades(selectedStateId);
 
-        // Obter as coordenadas do estado selecionado via API do IBGE
-        fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedStateId}`)
-            .then(response => response.json())
-            .then(stateData => {
-                const lat = stateData.latitude;
-                const lon = stateData.longitude;
-                updateLocation(lat, lon, selectedStateName);
-            })
-            .catch(error => console.error('Erro ao buscar coordenadas do estado:', error));
+        // Buscar coordenadas da localidade (estado)
+        buscarCoordenadas(selectedStateName, function (lat, lon) {
+            updateLocation(lat, lon, selectedStateName);
+        });
 
         // Atualizar sensores para o estado selecionado
         fetch(`/sensor/filtro/${encodeURIComponent(selectedStateName)}`)
@@ -199,7 +215,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Evento de mudança no seletor de cidades
     document.getElementById('inputGroupSelectCity').addEventListener('change', function () {
         const selectedCityName = this.value;
-        const selectedCityId = this.options[this.selectedIndex].getAttribute('data-id');
         const selectedStateName = document.getElementById('inputGroupSelect02').value;
 
         if (selectedCityName === 'null') {
@@ -210,15 +225,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // Atualizar local de exibição
         atualizarLocalizacao(selectedCityName);
 
-        // Buscar coordenadas da cidade selecionada via API do IBGE
-        fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${selectedCityId}`)
-            .then(response => response.json())
-            .then(cityData => {
-                const lat = cityData.microrregiao.mesorregiao.UF.latitude;  // Latitude da cidade
-                const lon = cityData.microrregiao.mesorregiao.UF.longitude; // Longitude da cidade
-                updateLocation(lat, lon, selectedCityName);
-            })
-            .catch(error => console.error('Erro ao buscar coordenadas da cidade:', error));
+        // Buscar coordenadas da cidade selecionada
+        buscarCoordenadas(`${selectedCityName}, ${selectedStateName}`, function (lat, lon) {
+            updateLocation(lat, lon, selectedCityName);
+        });
 
         // Carregar e exibir sensores para a cidade selecionada
         fetch(`/sensor/filtro/${encodeURIComponent(selectedStateName)}/${encodeURIComponent(selectedCityName)}`)
