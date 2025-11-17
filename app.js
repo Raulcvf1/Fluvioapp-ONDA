@@ -8,12 +8,12 @@ const rotaSensor = require('./control/rota_sensor');
 const app = express();
 
 // Conexão com o MongoDB Atlas
-const mongoURI = 'mongodb+srv://raulcvf:raulcvf2007@cluster0.0vxks.mongodb.net/fluvioapp?retryWrites=true&w=majority&appName=Cluster0';
-mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
+//const mongoURI = 'mongodb+srv://raulcvf:raulcvf2007@cluster0.0vxks.mongodb.net/fluvioapp?retryWrites=true&w=majority&appName=Cluster0';
+//mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
 
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'Erro de conexão ao MongoDB:'));
-db.once('open', () => {
+//const db = mongoose.connection;
+//db.on('error', console.error.bind(console, 'Erro de conexão ao MongoDB:'));
+//db.once('open', () => {
     console.log('Conectado ao MongoDB Atlas');
 
     // Configurações do Express
@@ -22,7 +22,7 @@ db.once('open', () => {
     app.use(express.static(path.join(__dirname, 'view')));
 
     // Rotas
-    rotaSensor(app, db);
+    //rotaSensor(app, db);
 
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
@@ -65,4 +65,4 @@ db.once('open', () => {
         console.error('Erro ao conectar no broker MQTT:', error);
     });
     */
-});
+//});
